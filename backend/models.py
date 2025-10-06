@@ -41,13 +41,15 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     full_name = Column(String, index=True)
-    email = Column(String, unique=True, index=True)
+    email = Column(String, index=True) # No longer globally unique by itself
     phone = Column(String, nullable=True) # Asesor's phone
     hashed_password = Column(String) # Password for the advisor, if they get login rights in the future.
     is_active = Column(Boolean, default=True)
     account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"))
 
     account = relationship("Account", back_populates="users")
+
+    __table_args__ = (UniqueConstraint('email', 'account_id', name='_email_account_uc'),)
 
 # A Client belongs to an Account.
 class Client(Base):

@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 import datetime
 import secrets
+from fastapi import HTTPException
 
 import models, schemas
 from passlib.context import CryptContext
@@ -102,14 +103,27 @@ def get_users_by_account(db: Session, account_id: int, skip: int = 0, limit: int
     return db.query(models.User).filter(models.User.account_id == account_id).offset(skip).limit(limit).all()
 
 def create_account_user(db: Session, user: schemas.UserCreate, account_id: int):
+    # Check if a user with this email already exists within this specific account
+    existing_user = db.query(models.User).filter(
+        models.User.email == user.email, 
+        models.User.account_id == account_id
+    ).first()
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Un asesor con el email '{user.email}' ya existe en esta cuenta."
+        )
+
     # Auto-generate a secure password
     random_password = secrets.token_urlsafe(16)
     hashed_password = get_password_hash(random_password)
     
     db_user = models.User(
         email=user.email,
-        full_name=user.full_name,
-        phone=user.phone,
+        # Safely access optional fields, providing a default if they don't exist
+        full_name=getattr(user, 'full_name', None),
+        phone=getattr(user, 'phone', None),
         hashed_password=hashed_password,
         account_id=account_id
     )
