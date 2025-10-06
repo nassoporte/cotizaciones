@@ -185,7 +185,41 @@ def read_clients(
 ):
     return crud.get_clients(db, account_id=current_account.id)
 
-# --- Product Endpoints ---
+@app.get("/clients/{client_id}", response_model=schemas.Client)
+def read_client(
+    client_id: int,
+    db: Session = Depends(auth.get_db),
+    current_account: models.Account = Depends(auth.get_current_active_account),
+):
+    db_client = crud.get_client(db, client_id=client_id, account_id=current_account.id)
+    if db_client is None:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return db_client
+
+@app.put("/clients/{client_id}", response_model=schemas.Client)
+def update_client(
+    client_id: int,
+    client: schemas.ClientCreate,
+    db: Session = Depends(auth.get_db),
+    current_account: models.Account = Depends(auth.get_current_active_account),
+):
+    db_client = crud.update_client(db, client_id=client_id, client=client, account_id=current_account.id)
+    if db_client is None:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return db_client
+
+@app.delete("/clients/{client_id}", status_code=status.HTTP_200_OK)
+def delete_client(
+    client_id: int,
+    db: Session = Depends(auth.get_db),
+    current_account: models.Account = Depends(auth.get_current_active_account),
+):
+    db_client = crud.delete_client(db, client_id=client_id, account_id=current_account.id)
+    if db_client is None:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return {"message": "Client deleted successfully"}
+
+# Productos
 
 @app.post("/products/", response_model=schemas.Product, status_code=status.HTTP_201_CREATED)
 def create_product(
@@ -201,6 +235,23 @@ def read_products(
     current_account: models.Account = Depends(auth.get_current_active_account)
 ):
     return crud.get_products(db, account_id=current_account.id)
+
+@app.put("/products/{product_id}", response_model=schemas.Product)
+def update_product_endpoint(
+    product_id: int,
+    product_in: schemas.ProductUpdate,
+    db: Session = Depends(auth.get_db),
+    current_account: models.Account = Depends(auth.get_current_active_account)
+):
+    db_product = crud.update_product(
+        db=db, 
+        product_id=product_id, 
+        product_in=product_in, 
+        account_id=current_account.id
+    )
+    if db_product is None:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return db_product
 
 # --- Quotation Endpoints ---
 

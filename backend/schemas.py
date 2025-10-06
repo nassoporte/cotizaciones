@@ -68,8 +68,28 @@ class CompanyProfileCreate(CompanyProfileBase):
 class TermsConditionsCreate(TermsConditionsBase):
     pass
 
+# --- Update Schemas ---
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+
+class ClientUpdate(BaseModel):
+    name: Optional[str] = None
+    client_id_number: Optional[str] = None
+    contact_person: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+
 class QuotationUpdate(BaseModel):
+    client_id: Optional[int] = None
+    user_id: Optional[int] = None
+    valid_until_date: Optional[datetime.date] = None
+    tax_percentage: Optional[float] = None
+    other_charges: Optional[float] = None
     status: Optional[str] = None
+    items: Optional[List[QuotationItemCreate]] = None
 
 class UserUpdate(BaseModel):
     email: Optional[str] = None

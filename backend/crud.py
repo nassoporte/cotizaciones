@@ -165,6 +165,29 @@ def create_client(db: Session, client: schemas.ClientCreate, account_id: int):
     db.refresh(db_client)
     return db_client
 
+def get_client(db: Session, client_id: int, account_id: int):
+    return db.query(models.Client).filter(models.Client.id == client_id, models.Client.account_id == account_id).first()
+
+def update_client(db: Session, client_id: int, client: schemas.ClientCreate, account_id: int):
+    db_client = get_client(db, client_id=client_id, account_id=account_id)
+    if not db_client:
+        return None
+    # Create a new dictionary from the client schema to avoid issues with the attached state
+    update_data = client.dict()
+    for key, value in update_data.items():
+        setattr(db_client, key, value)
+    db.commit()
+    db.refresh(db_client)
+    return db_client
+
+def delete_client(db: Session, client_id: int, account_id: int):
+    db_client = get_client(db, client_id=client_id, account_id=account_id)
+    if not db_client:
+        return None
+    db.delete(db_client)
+    db.commit()
+    return db_client
+
 # --- Product Functions (Scoped by Account) ---
 
 def get_products(db: Session, account_id: int, skip: int = 0, limit: int = 100):
@@ -172,6 +195,20 @@ def get_products(db: Session, account_id: int, skip: int = 0, limit: int = 100):
 
 def create_product(db: Session, product: schemas.ProductCreate, account_id: int):
     db_product = models.Product(**product.dict(), account_id=account_id)
+    db.add(db_product)
+    db.commit()
+    db.refresh(db_product)
+    return db_product
+
+def update_product(db: Session, product_id: int, product_in: schemas.ProductUpdate, account_id: int):
+    db_product = db.query(models.Product).filter(models.Product.id == product_id, models.Product.account_id == account_id).first()
+    if not db_product:
+        return None
+    
+    update_data = product_in.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_product, key, value)
+        
     db.add(db_product)
     db.commit()
     db.refresh(db_product)
@@ -256,12 +293,39 @@ def update_quotation(db: Session, quotation_id: int, quotation_in: schemas.Quota
     db_quotation = get_quotation(db, quotation_id=quotation_id, account_id=account_id)
     if not db_quotation:
         return None
-    
+
+    # 1. Update scalar fields from the input schema
     update_data = quotation_in.dict(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(db_quotation, key, value)
-        
-    db.add(db_quotation)
+        if hasattr(db_quotation, key) and key != "items":
+            setattr(db_quotation, key, value)
+
+    # 2. Delete existing items associated with the quotation
+    db.query(models.QuotationItem).filter(models.QuotationItem.quotation_id == quotation_id).delete()
+
+    # 3. Create new items from the input
+    new_items = []
+    if quotation_in.items:
+        for item_in in quotation_in.items:
+            db_item = models.QuotationItem(
+                **item_in.dict(),
+                quotation_id=db_quotation.id,
+                total=item_in.unit_price * item_in.quantity
+            )
+            db.add(db_item)
+            new_items.append(db_item)
+
+    # 4. Recalculate totals based on the new items
+    subtotal = sum(item.total for item in new_items)
+    taxable_amount = sum(item.total for item in new_items if item.is_taxable)
+    total_tax = taxable_amount * (db_quotation.tax_percentage / 100)
+    total = subtotal + total_tax + db_quotation.other_charges
+
+    db_quotation.subtotal = subtotal
+    db_quotation.total_tax = total_tax
+    db_quotation.total = total
+
+    # 5. Commit changes and refresh
     db.commit()
     db.refresh(db_quotation)
     return db_quotation
