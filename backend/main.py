@@ -31,7 +31,7 @@ app = FastAPI()
 # --- CORS Middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://cotizaciones-beryl.vercel.app"], # Adjust for your frontend URL
+    allow_origins=["http://localhost:3000", "https://cotizador-soporte.vercel.app"], # Adjust for your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
