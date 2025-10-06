@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cotización {{ q.quotation_number }}</title>
+    <style>
+        @page {
+            size: letter;
+            margin: 0.5in;
+        }
+        body {
+            font-family: sans-serif;
+            font-size: 11px;
+            color: #333;
+        }
+        .header-container {
+            display: flex; /* Use flexbox for two columns */
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        .company-details {
+            flex: 3; /* Takes 3 parts of available space */
+            padding-right: 15px; /* Add some space between columns */
+        }
+        .quotation-details {
+            flex: 2; /* Takes 2 parts of available space */
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .logo-and-name {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .logo {
+            max-width: 250px;
+            max-height: 120px;
+            width: auto;
+            height: auto;
+            margin-right: 15px;
+        }
+        .company-details h2 {
+            margin: 0;
+            font-size: 2.5em; /* Increased font size to 2.5em */
+            color: #003366;
+        }
+        .company-info-text {
+            margin-top: 5px;
+            margin-left: 0;
+        }
+        .quotation-details h4 {
+            font-size: 1.8em; /* Increased font size for COTIZACIÓN title */
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .quotation-details table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+        }
+        .quotation-details table td {
+            border: none;
+            padding: 2px 0;
+        }
+        .quotation-details table td:first-child {
+            font-weight: bold;
+            width: 45%; /* Adjust width for labels */
+        }
+        .client-container {
+            clear: both; /* Still good practice, though flexbox might make it less critical */
+            background-color: black; /* Black background for client container */
+            color: white; /* White text for client container */
+            padding: 10px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            border: none; /* Removed border */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 6px;
+            text-align: left;
+        }
+        th {
+            background-color: black; /* Black background for table headers */
+            color: white; /* White text for table headers */
+        }
+        .totals {
+            width: 45%;
+            margin-left: auto; /* Push to the right */
+            margin-bottom: 20px;
+        }
+        .totals table td:first-child { font-weight: bold; }
+        .terms-acceptance-box {
+            clear: both;
+            border: 1px solid #333;
+            padding: 10px;
+            margin-top: 30px;
+            display: inline-block;
+            /* Reverted width/margin properties */
+        }
+        .terms h4 {
+            background-color: black;
+            color: white;
+            padding: 5px;
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        .acceptance {
+            margin-top: 20px;
+        }
+        .signature-line {
+            border-bottom: 1px solid #333;
+            width: 300px;
+            margin-left: auto; /* Centered */
+            margin-right: auto;
+            margin-top: 40px;
+        }
+        .acceptance p {
+            text-align: center; /* Center client name */
+        }
+        .footer {
+            position: fixed;
+            left: 0.5in;
+            right: 0.5in;
+            bottom: 0.3in;
+            text-align: center;
+            font-size: 9px;
+            border-top: 1px solid #ccc;
+            padding-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header-container">
+        <div class="company-details">
+            <div class="logo-and-name">
+                {% if company.logo_path %}
+                    <img src="{{ base_url }}{{ company.logo_path }}" alt="Logo" class="logo">
+                {% endif %}
+                <h2>{{ company.company_name }}</h2>
+            </div>
+            <p class="company-info-text">
+                {{ company.address }}<br>
+                Sitio Web: {{ company.website }}<br>
+                Teléfono: {{ company.phone }}<br>
+                Asesor de venta: {{ q.user.full_name }}
+            </p>
+        </div>
+        <div class="quotation-details">
+            <h4>COTIZACIÓN</h4>
+            <table>
+                <tr>
+                    <td>FECHA:</td>
+                    <td>{{ q.created_date.strftime('%d/%m/%Y') }}</td>
+                </tr>
+                <tr>
+                    <td>COTIZACIÓN N°:</td>
+                    <td style="color: red; font-weight: bold;">{{ q.quotation_number }}</td>
+                </tr>
+                <tr>
+                    <td>CLIENTE ID:</td>
+                    <td>{{ q.client.client_id_number or 'N/A' }}</td>
+                </tr>
+                <tr>
+                    <td>VALIDO HASTA:</td>
+                    <td style="font-weight: bold;">{{ q.valid_until_date.strftime('%d/%m/%Y') }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div class="client-container">
+        <strong>CLIENTE:</strong> {{ q.client.name }}
+    </div>
+
+    <div class="main-content-area">
+        <table class="items">
+            <thead>
+                <tr>
+                    <th>DESCRIPCIÓN</th>
+                    <th style="width: 10%; text-align: center;">CANTIDAD</th>
+                    <th style="width: 15%; text-align: right;">PRECIO UNITARIO</th>
+                    <th style="width: 15%; text-align: right;">TOTAL</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in q.items %}
+            <tr>
+                <td>
+                    {% if item.product %}
+                        <strong>{{ item.product.name }}</strong><br>
+                    {% endif %}
+                    {{ item.description }}
+                </td>
+                <td style="text-align: center;">{{ item.quantity }}</td>
+                <td style="text-align: right;">${{ "%.2f"|format(item.unit_price) }}</td>
+                <td style="text-align: right;">${{ "%.2f"|format(item.total) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+        <div class="totals">
+            <table>
+                <tr>
+                    <td>Subtotal</td>
+                    <td style="text-align: right;">${{ "%.2f"|format(q.subtotal) }}</td>
+                </tr>
+                <tr>
+                    <td>Impuesto ({{ "%.0f"|format(q.tax_percentage) }}%)</td>
+                    <td style="text-align: right;">${{ "%.2f"|format(q.total_tax) }}</td>
+                </tr>
+                {% if q.other_charges != 0 %}
+                <tr>
+                    <td>Otros</td>
+                    <td style="text-align: right;">${{ "%.2f"|format(q.other_charges) }}</td>
+                </tr>
+                {% endif %}
+                <tr style="font-size: 1.2em;">
+                    <td><strong>TOTAL</strong></td>
+                    <td style="text-align: right;"><strong>${{ "%.2f"|format(q.total) }}</strong></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="terms-acceptance-box">
+            <div class="terms">
+                <h4>TÉRMINOS Y CONDICIONES</h4>
+                <p style="font-size: 10px; white-space: pre-wrap;">{{ terms.content }}</p>
+            </div>
+
+            <div class="acceptance">
+                <p>Firma de aceptación del cliente:</p>
+                <div class="signature-line"></div>
+                <p>{{ q.client.name }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Si usted tiene alguna pregunta sobre esta cotización, por favor, póngase en contacto con nosotros<br>
+        Asesor: {{ q.user.full_name }}, Teléfono: {{ q.user.phone or 'N/A' }}, Correo: {{ q.user.email }}
+        <br><span style="font-size: 1.2em; font-weight: bold;">¡Gracias por hacer negocios con nosotros!</span>
+    </div>
+</body>
+</html>
