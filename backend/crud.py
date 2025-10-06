@@ -252,6 +252,20 @@ def create_quotation(db: Session, quotation: schemas.QuotationCreate, user_id: i
     db.refresh(db_quotation)
     return db_quotation
 
+def update_quotation(db: Session, quotation_id: int, quotation_in: schemas.QuotationUpdate, account_id: int):
+    db_quotation = get_quotation(db, quotation_id=quotation_id, account_id=account_id)
+    if not db_quotation:
+        return None
+    
+    update_data = quotation_in.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_quotation, key, value)
+        
+    db.add(db_quotation)
+    db.commit()
+    db.refresh(db_quotation)
+    return db_quotation
+
 def delete_quotation(db: Session, quotation_id: int, account_id: int):
     db_quotation = get_quotation(db, quotation_id=quotation_id, account_id=account_id)
     if not db_quotation:

@@ -68,6 +68,9 @@ class CompanyProfileCreate(CompanyProfileBase):
 class TermsConditionsCreate(TermsConditionsBase):
     pass
 
+class QuotationUpdate(BaseModel):
+    status: Optional[str] = None
+
 class UserUpdate(BaseModel):
     email: Optional[str] = None
     full_name: Optional[str] = None

@@ -234,6 +234,23 @@ def read_quotation(
         raise HTTPException(status_code=404, detail="Quotation not found")
     return db_quotation
 
+@app.put("/quotations/{quotation_id}", response_model=schemas.Quotation)
+def update_quotation_endpoint(
+    quotation_id: int,
+    quotation_in: schemas.QuotationUpdate,
+    db: Session = Depends(auth.get_db),
+    current_account: models.Account = Depends(auth.get_current_active_account)
+):
+    db_quotation = crud.update_quotation(
+        db=db, 
+        quotation_id=quotation_id, 
+        quotation_in=quotation_in, 
+        account_id=current_account.id
+    )
+    if db_quotation is None:
+        raise HTTPException(status_code=404, detail="Quotation not found")
+    return db_quotation
+
 @app.delete("/quotations/{quotation_id}", status_code=status.HTTP_200_OK)
 def delete_quotation(
     quotation_id: int, 

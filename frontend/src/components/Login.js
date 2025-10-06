@@ -62,7 +62,10 @@ function Login() {
                     backdropFilter: 'blur(4px)',
                 }}
             >
-                <Typography component="h1" variant="h5" sx={{ mb: 2, color: '#212121' }}>
+                <Typography component="h1" variant="h4" sx={{ mb: 1, color: '#1a237e' }}>
+                    Cotizaciones
+                </Typography>
+                <Typography component="h2" variant="h5" sx={{ mb: 2, color: '#212121' }}>
                     Iniciar Sesión
                 </Typography>
                 <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
