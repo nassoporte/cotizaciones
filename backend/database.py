@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
@@ -17,6 +17,14 @@ is_sqlite = SQLALCHEMY_DATABASE_URL.startswith("sqlite")
 engine_args = {"connect_args": {"check_same_thread": False}} if is_sqlite else {}
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL, **engine_args)
+
+# Activar WAL mode para mejor concurrencia con multiples workers
+if is_sqlite:
+    @event.listens_for(engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

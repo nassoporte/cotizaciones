@@ -1,122 +1,117 @@
 import React, { useState } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { FaUser, FaLock, FaMoon, FaSun } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
-import {
-    Grid,
-    Box,
-    Paper,
-    Typography,
-    TextField,
-    Button,
-    Alert,
-    Link,
-    CircularProgress
-} from '@mui/material';
-import Fondo from '../Fondo.jpg'; // Import the background image
+import { useNavigate, Navigate } from 'react-router-dom';
+import apiClient from '../api/axios';
+import './Login.css';
 
 function Login() {
+    const { isAuthenticated, login, appConfig, theme, toggleTheme } = useAuth();
+    const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
     const [loading, setLoading] = useState(false);
-    const navigate = useNavigate();
-    const { login } = useAuth();
 
-    const handleSubmit = async (e) => {
+    // Si ya está autenticado, redirigir automáticamente
+    if (isAuthenticated) {
+        return <Navigate to="/quotations" replace />;
+    }
+
+    const handleLogin = async (e) => {
         e.preventDefault();
-        setError('');
+        setErrorMsg('');
         setLoading(true);
-
         const success = await login(username, password);
-        setLoading(false);
-
         if (success) {
-            navigate('/clients'); // Redirect to a default page after login
+            navigate('/quotations');
         } else {
-            setError('Usuario o contraseña incorrectos.');
+            setErrorMsg('Usuario o contraseña incorrectos.');
         }
+        setLoading(false);
     };
 
+    const BASE_URL = apiClient.defaults.baseURL || 'http://127.0.0.1:8000';
+
+    const bgStyle = appConfig?.fondo_login_url
+        ? { backgroundImage: `url(${BASE_URL}/fondos/${appConfig.fondo_login_url})` }
+        : {};
+    const overlayOpacity = parseFloat(appConfig?.overlay_opacity ?? 0.45);
+
     return (
-        <Grid 
-            container 
-            component="main" 
-            sx={{
-                minHeight: '100vh',
-                backgroundImage: `url(${Fondo})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundRepeat: 'no-repeat',
-                alignItems: 'center',
-                justifyContent: 'center',
-            }}
-        >
-            <Grid item xs={11} sm={8} md={4} component={Paper} elevation={6} 
-                sx={{
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center',
-                    p: 4,
-                    maxWidth: 400, // Set a max-width for the form
-                    backgroundColor: 'rgba(255, 255, 255, 0.75)',
-                    backdropFilter: 'blur(4px)',
-                }}
-            >
-                <Typography component="h1" variant="h4" sx={{ mb: 1, color: '#1a237e' }}>
-                    Cotizaciones
-                </Typography>
-                <Typography component="h2" variant="h5" sx={{ mb: 2, color: '#212121' }}>
-                    Iniciar Sesión
-                </Typography>
-                <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        id="username"
-                        label="Usuario"
-                        name="username"
-                        autoComplete="username"
-                        autoFocus
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                        disabled={loading}
-                        variant="outlined"
-                        sx={{ '& .MuiInputBase-input': { color: '#212121' } }}
-                    />
-                    <TextField
-                        margin="normal"
-                        required
-                        fullWidth
-                        name="password"
-                        label="Contraseña"
-                        type="password"
-                        id="password"
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        disabled={loading}
-                        variant="outlined"
-                        sx={{ '& .MuiInputBase-input': { color: '#212121' } }}
-                    />
-                    {error && <Alert severity="error" sx={{ width: '100%', mt: 2 }}>{error}</Alert>}
-                    <Button
+        <div className="login-page" style={bgStyle}>
+            {/* Overlay oscuro */}
+            <div
+                className="login-bg-overlay"
+                style={{ background: `rgba(10, 18, 38, ${overlayOpacity})` }}
+            />
+
+            {/* Toggle de tema */}
+            <button className="login-theme-toggle" onClick={toggleTheme} title="Cambiar tema">
+                {theme === 'light' ? <FaMoon /> : <FaSun />}
+            </button>
+
+            {/* Caja principal */}
+            <div className="login-card glass page-fade-in">
+                {/* Header */}
+                <div className="login-card-header">
+                    {appConfig?.logo_app_url && (
+                        <img
+                            src={`${BASE_URL}/logos/${appConfig.logo_app_url}`}
+                            alt="Logo"
+                            style={{ maxHeight: 90, objectFit: 'contain', margin: '0 auto 14px', display: 'block' }}
+                        />
+                    )}
+                    <h1 className="login-title">Cotizador</h1>
+                    <p className="login-subtitle">Inicia sesión para continuar</p>
+                </div>
+
+                {/* Error */}
+                {errorMsg && (
+                    <div className="login-error-banner">
+                        ⚠️ {errorMsg}
+                    </div>
+                )}
+
+                {/* Form */}
+                <form onSubmit={handleLogin} className="login-form">
+                    <div className="login-input-group">
+                        <FaUser className="login-input-icon" />
+                        <input
+                            className="login-input"
+                            type="text"
+                            placeholder="Usuario"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            autoFocus
+                        />
+                    </div>
+                    <div className="login-input-group">
+                        <FaLock className="login-input-icon" />
+                        <input
+                            className="login-input"
+                            type="password"
+                            placeholder="Contraseña"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <button
                         type="submit"
-                        fullWidth
-                        variant="contained"
-                        sx={{ mt: 3, mb: 2, py: 1.5 }}
+                        className="login-submit-btn btn-primary"
                         disabled={loading}
                     >
-                        {loading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
-                    </Button>
-                    <Box textAlign="center">
-                        <Link component={RouterLink} to="/register" variant="body2">
-                            ¿No tienes una cuenta? Regístrate
-                        </Link>
-                    </Box>
-                </Box>
-            </Grid>
-        </Grid>
+                        {loading ? 'Iniciando sesión...' : 'Entrar'}
+                    </button>
+                </form>
+
+                <div className="login-footer">
+                    Sistema de Cotizaciones
+                </div>
+            </div>
+        </div>
     );
 }
 

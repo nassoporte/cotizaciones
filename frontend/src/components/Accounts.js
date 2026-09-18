@@ -138,7 +138,7 @@ function Accounts() {
     };
 
     const handleOpenEditDialog = (account) => {
-        setEditFormState(account);
+        setEditFormState({ ...account, password: '' }); // Initialize password as empty
         setOpenEditDialog(true);
     };
 
@@ -155,6 +155,12 @@ function Accounts() {
         }
         try {
             const { id, ...updateData } = editFormState;
+            
+            // Only include the password if it's not empty
+            if (!updateData.password) {
+                delete updateData.password;
+            }
+
             await apiClient.put(`/accounts/${id}`, updateData);
             fetchAccounts(); // Refresh list
             setSuccess('Cuenta actualizada con éxito.');
@@ -166,11 +172,7 @@ function Accounts() {
     };
 
     return (
-        <Container>
-            <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4 }}>
-                Gestión de Titulares (Cuentas)
-            </Typography>
-
+        <Box sx={{ width: '100%' }}>
             {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
             {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
 
@@ -208,7 +210,7 @@ function Accounts() {
             {loading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>
             ) : (
-                <TableContainer component={Paper}>
+                <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
                     <Table>
                         <TableHead>
                             <TableRow>
@@ -299,6 +301,17 @@ function Accounts() {
                             />
                             <TextField
                                 margin="dense"
+                                name="password"
+                                label="Nueva Contraseña (opcional)"
+                                type="password"
+                                fullWidth
+                                variant="outlined"
+                                value={editFormState.password}
+                                onChange={handleEditFormChange}
+                                autoComplete="new-password"
+                            />
+                            <TextField
+                                margin="dense"
                                 select
                                 name="role"
                                 label="Rol"
@@ -317,7 +330,7 @@ function Accounts() {
                     </Box>
                 </Dialog>
             )}
-        </Container>
+        </Box>
     );
 }
 

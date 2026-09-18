@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from typing import List, Optional
 import datetime
 
@@ -11,7 +11,6 @@ class ProductBase(BaseModel):
 
 class ClientBase(BaseModel):
     name: str
-    client_id_number: Optional[str] = None
     contact_person: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -31,16 +30,19 @@ class UserBase(BaseModel):
 class QuotationBase(BaseModel):
     client_id: int
     user_id: int
-    valid_until_date: datetime.date
+    validity_days: int = 30
     tax_percentage: float = 16.0
     other_charges: float = 0.0
     status: str = 'draft'
+    payment_status: Optional[str] = 'no_pagada'
 
 class CompanyProfileBase(BaseModel):
     company_name: str
     address: str
     phone: str
     website: str
+    footer_text: Optional[str] = "Si usted tiene alguna pregunta sobre esta cotización, por favor, póngase en contacto con nosotros"
+    footer_thanks: Optional[str] = "¡Gracias por hacer negocios con nosotros!"
 
 class TermsConditionsBase(BaseModel):
     content: str
@@ -65,6 +67,14 @@ class QuotationCreate(QuotationBase):
 class CompanyProfileCreate(CompanyProfileBase):
     pass
 
+class CompanyProfileUpdate(BaseModel):
+    company_name: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    website: Optional[str] = None
+    footer_text: Optional[str] = None
+    footer_thanks: Optional[str] = None
+
 class TermsConditionsCreate(TermsConditionsBase):
     pass
 
@@ -77,7 +87,6 @@ class ProductUpdate(BaseModel):
 
 class ClientUpdate(BaseModel):
     name: Optional[str] = None
-    client_id_number: Optional[str] = None
     contact_person: Optional[str] = None
     email: Optional[str] = None
     phone: Optional[str] = None
@@ -85,10 +94,11 @@ class ClientUpdate(BaseModel):
 class QuotationUpdate(BaseModel):
     client_id: Optional[int] = None
     user_id: Optional[int] = None
-    valid_until_date: Optional[datetime.date] = None
+    validity_days: Optional[int] = None
     tax_percentage: Optional[float] = None
     other_charges: Optional[float] = None
     status: Optional[str] = None
+    payment_status: Optional[str] = None
     items: Optional[List[QuotationItemCreate]] = None
 
 class UserUpdate(BaseModel):
@@ -111,6 +121,7 @@ class Product(ProductBase):
 
 class Client(ClientBase):
     id: int
+    client_id_number: Optional[str] = None
     account_id: int
 
     class Config:
@@ -135,6 +146,7 @@ class Quotation(QuotationBase):
     id: int
     quotation_number: str
     created_date: datetime.datetime
+    valid_until_date: datetime.datetime
     subtotal: float
     total_tax: float
     total: float
@@ -171,7 +183,16 @@ class AccountCreate(AccountBase):
 
 class AccountUpdate(BaseModel):
     full_name: Optional[str] = None
+    username: Optional[str] = None
     role: Optional[str] = None
+    password: Optional[str] = None
+
+    @validator('password', pre=True, always=True)
+    def empty_password_to_none(cls, v):
+        """Treat empty string as None so it is excluded from updates."""
+        if v == '' or v is None:
+            return None
+        return v
 
 class AccountDeleteWithPassword(BaseModel):
     password: str
@@ -194,3 +215,22 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     username: Optional[str] = None
+
+
+# --- App Settings Schemas (Global, not per-account) ---
+
+class AppSettingsBase(BaseModel):
+    fondo_login_url: Optional[str] = None
+    overlay_opacity: Optional[str] = "0.4"
+    logo_app_url: Optional[str] = None
+
+class AppSettingsUpdate(BaseModel):
+    fondo_login_url: Optional[str] = None
+    overlay_opacity: Optional[str] = None
+    logo_app_url: Optional[str] = None
+
+class AppSettings(AppSettingsBase):
+    id: int
+
+    class Config:
+        from_attributes = True

@@ -1,0 +1,42 @@
+[
+  {
+    "size": 16,
+    "type": "windows",
+    "iconName": "favicon-16x16.png"
+  },
+  {
+    "size": 32,
+    "type": "windows",
+    "iconName": "favicon-32x32.png"
+  },
+  {
+    "size": 192,
+    "type": "android",
+    "iconName": "android-chrome-192x192.png"
+  },
+  {
+    "size": 512,
+    "type": "android",
+    "iconName": "android-chrome-512x512.png"
+  },
+  {
+    "size": 57,
+    "type": "apple",
+    "iconName": "apple-touch-icon.png"
+  },
+  {
+    "size": 114,
+    "type": "apple",
+    "iconName": "apple-touch-icon.png"
+  },
+  {
+    "size": 144,
+    "type": "apple",
+    "iconName": "apple-touch-icon.png"
+  },
+  {
+    "size": 500,
+    "type": "apple",
+    "iconName": "apple-touch-icon.png"
+  }
+]

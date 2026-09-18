@@ -21,6 +21,7 @@ class Account(Base):
     products = relationship("Product", back_populates="account", cascade="all, delete-orphan")
     quotations = relationship("Quotation", back_populates="account", cascade="all, delete-orphan")
     terms_conditions = relationship("TermsConditions", back_populates="account", uselist=False, cascade="all, delete-orphan")
+    company_profile = relationship("CompanyProfile", back_populates="account", uselist=False, cascade="all, delete-orphan")
 
 class CompanyProfile(Base):
     __tablename__ = "company_profiles"
@@ -31,9 +32,11 @@ class CompanyProfile(Base):
     phone = Column(String, default="[871]-1882233")
     website = Column(String, default="FB Multiserv Galag")
     logo_path = Column(String, nullable=True)
-    # In a multi-tenant setup, this could also be linked to an Account
-    # account_id = Column(Integer, ForeignKey("accounts.id"))
-    # account = relationship("Account")
+    footer_text = Column(String, nullable=True, default="Si usted tiene alguna pregunta sobre esta cotización, por favor, póngase en contacto con nosotros")
+    footer_thanks = Column(String, nullable=True, default="¡Gracias por hacer negocios con nosotros!")
+    account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), unique=True)
+
+    account = relationship("Account", back_populates="company_profile")
 
 # The User model now represents a Sales Advisor (Asesor) belonging to an Account.
 class User(Base):
@@ -87,12 +90,14 @@ class Quotation(Base):
     account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE")) # The account it belongs to
     created_date = Column(DateTime, default=datetime.datetime.utcnow)
     valid_until_date = Column(DateTime)
+    validity_days = Column(Integer, default=30)
     subtotal = Column(Float)
     tax_percentage = Column(Float)
     total_tax = Column(Float)
     other_charges = Column(Float, default=0)
     total = Column(Float)
     status = Column(String, default="draft") # e.g., draft, sent, accepted, rejected
+    payment_status = Column(String, default="no_pagada") # e.g., no_pagada, pagada
 
     client = relationship("Client")
     user = relationship("User")
@@ -124,3 +129,13 @@ class TermsConditions(Base):
     account_id = Column(Integer, ForeignKey("accounts.id", ondelete="CASCADE"), unique=True)
 
     account = relationship("Account", back_populates="terms_conditions")
+
+
+# Global application settings (not per-account): login background, etc.
+class AppSettings(Base):
+    __tablename__ = "app_settings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fondo_login_url = Column(String, nullable=True)
+    overlay_opacity = Column(String, default="0.4")
+    logo_app_url = Column(String, nullable=True)

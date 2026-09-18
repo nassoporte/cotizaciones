@@ -1,7 +1,25 @@
 import axios from 'axios';
 
+const getApiBaseUrl = () => {
+  const hostname = window.location.hostname;
+
+  // 1. Development Environment
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return process.env.REACT_APP_API_URL || 'http://localhost:8000';
+  }
+
+  // 2. Production (Local Network Access)
+  if (hostname === '192.168.50.200') {
+    return 'http://192.168.50.200:8001';
+  }
+
+  // 3. Default to Public Internet URL for all other cases
+  // (e.g., cotizador.trcmx.lat, public IPs, etc.)
+  return 'https://api_cotizador.trcmx.lat';
+};
+
 const apiClient = axios.create({
-    baseURL: process.env.REACT_APP_API_URL || 'http://127.0.0.1:8000',
+    baseURL: getApiBaseUrl(),
 });
 
 // Request interceptor to add the auth token to headers

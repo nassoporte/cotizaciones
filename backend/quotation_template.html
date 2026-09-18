@@ -33,9 +33,8 @@
             margin-bottom: 10px;
         }
         .logo {
-            max-width: 250px;
-            max-height: 120px;
-            width: auto;
+            width: 320px;
+            max-height: 150px;
             height: auto;
             margin-right: 15px;
         }
@@ -153,7 +152,7 @@
             </p>
         </div>
         <div class="quotation-details">
-            <h4>COTIZACIÓN</h4>
+            <h4>{{ document_title }}</h4>
             <table>
                 <tr>
                     <td>FECHA:</td>
@@ -244,9 +243,9 @@
     </div>
 
     <div class="footer">
-        Si usted tiene alguna pregunta sobre esta cotización, por favor, póngase en contacto con nosotros<br>
+        {{ footer_text }}<br>
         Asesor: {{ q.user.full_name }}, Teléfono: {{ q.user.phone or 'N/A' }}, Correo: {{ q.user.email }}
-        <br><span style="font-size: 1.2em; font-weight: bold;">¡Gracias por hacer negocios con nosotros!</span>
+        <br><span style="font-size: 1.2em; font-weight: bold;">{{ footer_thanks }}</span>
     </div>
 </body>
 </html>

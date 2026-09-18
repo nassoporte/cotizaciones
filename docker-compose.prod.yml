@@ -1,0 +1,27 @@
+# Este archivo es para producción (para usar en tu NAS).
+# Asume que las imágenes ya han sido construidas y subidas a Docker Hub.
+services:
+  backend:
+    image: adorh/cotizaciones-backend:latest
+    container_name: cotizaciones_backend
+    restart: always
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - ./backend/.env
+    environment:
+      - TZ=America/Mexico_City
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+
+  frontend:
+    image: adorh/cotizaciones-frontend:latest
+    container_name: cotizaciones_frontend
+    restart: always
+    ports:
+      - "5003:80"
+    depends_on:
+      - backend
+    environment:
+      - TZ=America/Mexico_City

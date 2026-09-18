@@ -1,0 +1,195 @@
+/* ================================================
+   LOGIN PAGE — Glassmorphism + Fondo configurable
+   ================================================ */
+
+.login-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #0f172a;   /* fallback sin imagen */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Overlay de oscurecimiento sobre la imagen */
+.login-bg-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transition: background 0.4s;
+}
+
+/* Botón toggle de tema */
+.login-theme-toggle {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+.login-theme-toggle:hover {
+  transform: scale(1.1);
+  background: rgba(255,255,255,0.22);
+}
+
+/* Tarjeta principal */
+.login-card {
+  position: relative;
+  z-index: 2;
+  width: 90%;
+  max-width: 310px; /* Más pequeña */
+  border-radius: 20px !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  background: rgba(15, 23, 42, 0.45) !important; /* Fondo translúcido oscuro por defecto */
+  backdrop-filter: blur(25px) !important;
+  -webkit-backdrop-filter: blur(25px) !important;
+  box-shadow: 0 30px 70px rgba(0,0,0,0.55) !important;
+  padding: 30px 24px 22px;
+  text-align: center;
+}
+
+[data-theme="dark"] .login-card {
+  background: rgba(15,23,42,0.75) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+}
+
+/* Header */
+.login-card-header {
+  margin-bottom: 24px;
+}
+
+.login-logo-circle {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4285F4, #1a56db);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.8rem;
+  margin: 0 auto 14px;
+  box-shadow: 0 8px 24px rgba(66,133,244,0.4);
+}
+
+.login-title {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
+}
+
+.login-subtitle {
+  font-size: 0.88rem;
+  color: rgba(255,255,255,0.65);
+  margin: 0;
+}
+
+[data-theme="dark"] .login-title,
+[data-theme="dark"] .login-subtitle {
+  /* ya son blancos */
+}
+
+/* Error banner */
+.login-error-banner {
+  background: rgba(239,68,68,0.18);
+  border: 1px solid rgba(239,68,68,0.4);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  color: #fca5a5;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Formulario */
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.login-input-group {
+  position: relative;
+}
+
+.login-input-icon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(255,255,255,0.5);
+  font-size: 0.95rem;
+  pointer-events: none;
+}
+
+.login-input {
+  width: 100%;
+  padding: 12px 18px 12px 44px;
+  border-radius: 50px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+.login-input::placeholder { color: rgba(255,255,255,0.45); }
+.login-input:focus {
+  border-color: rgba(66,133,244,0.7);
+  background: rgba(255,255,255,0.15);
+  box-shadow: 0 0 0 3px rgba(66,133,244,0.2);
+}
+
+.login-submit-btn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 13px;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: 50px;
+  border: none;
+  background: linear-gradient(135deg, #4285F4, #1a56db);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 20px rgba(66,133,244,0.45);
+  transition: transform 0.15s, box-shadow 0.2s;
+  font-family: 'Outfit', sans-serif;
+}
+.login-submit-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(66,133,244,0.55);
+}
+.login-submit-btn:active { transform: translateY(0); }
+.login-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Footer */
+.login-footer {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,0.12);
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.4);
+}

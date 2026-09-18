@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import apiClient from '../api/axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Container,
     Typography,
@@ -27,39 +28,57 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 
+// Function to fetch products, to be used with useQuery
+const fetchProducts = async () => {
+    const { data } = await apiClient.get('/products/');
+    return data;
+};
+
 function Products() {
-    const [products, setProducts] = useState([]);
+    const queryClient = useQueryClient();
+
+    // State for dialogs and forms
     const [openFormDialog, setOpenFormDialog] = useState(false);
     const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
     const [isEdit, setIsEdit] = useState(false);
     const [selectedProductId, setSelectedProductId] = useState(null);
-
     const initialFormState = { id: null, name: '', description: '', price: '' };
     const [formState, setFormState] = useState(initialFormState);
+    const [feedback, setFeedback] = useState({ type: '', message: '' });
 
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    // useQuery for fetching products
+    const { data: products = [], isLoading, isError } = useQuery({ queryKey: ['products'], queryFn: fetchProducts });
 
-    const fetchProducts = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await apiClient.get('/products/');
-            setProducts(response.data);
-        } catch (err) {
-            setError('No se pudieron cargar los productos.');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // Mutations for create, update, delete
+    const createProductMutation = useMutation({
+        mutationFn: (newProduct) => apiClient.post('/products/', newProduct),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            setFeedback({ type: 'success', message: 'Producto creado con éxito.' });
+            handleCloseDialogs();
+        },
+        onError: () => { setFeedback({ type: 'error', message: 'No se pudo crear el producto.' }); },
+    });
 
-    useEffect(() => {
-        fetchProducts();
-    }, [fetchProducts]);
+    const updateProductMutation = useMutation({
+        mutationFn: (updatedProduct) => apiClient.put(`/products/${updatedProduct.id}`, updatedProduct),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            setFeedback({ type: 'success', message: 'Producto actualizado con éxito.' });
+            handleCloseDialogs();
+        },
+        onError: () => { setFeedback({ type: 'error', message: 'No se pudo actualizar el producto.' }); },
+    });
 
-    const handleFeedback = (setter, message) => {
-        setter(message);
-    };
+    const deleteProductMutation = useMutation({
+        mutationFn: (productId) => apiClient.delete(`/products/${productId}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['products'] });
+            setFeedback({ type: 'success', message: 'Producto eliminado con éxito.' });
+            handleCloseDialogs();
+        },
+        onError: () => { setFeedback({ type: 'error', message: 'No se pudo eliminar el producto.' }); },
+    });
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
@@ -89,74 +108,59 @@ function Products() {
         setSelectedProductId(null);
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (!formState.name.trim() || !formState.price) {
-            handleFeedback(setError, 'El nombre y el precio son obligatorios.');
+            setFeedback({ type: 'error', message: 'El nombre y el precio son obligatorios.' });
             return;
         }
 
         const productData = { 
+            id: formState.id,
             name: formState.name, 
             description: formState.description, 
             price: parseFloat(formState.price) 
         };
 
-        const url = isEdit ? `/products/${formState.id}` : '/products/';
-        const method = isEdit ? 'put' : 'post';
-
-        try {
-            const response = await apiClient[method](url, productData);
-            if (isEdit) {
-                setProducts(products.map(p => (p.id === formState.id ? response.data : p)));
-                handleFeedback(setSuccess, 'Producto actualizado con éxito.');
-            } else {
-                setProducts([...products, response.data]);
-                handleFeedback(setSuccess, 'Producto creado con éxito.');
-            }
-            handleCloseDialogs();
-        } catch (err) {
-            handleFeedback(setError, `No se pudo ${isEdit ? 'actualizar' : 'crear'} el producto.`);
+        if (isEdit) {
+            updateProductMutation.mutate(productData);
+        } else {
+            createProductMutation.mutate(productData);
         }
     };
 
-    const handleDelete = async () => {
-        if (!selectedProductId) return;
-        try {
-            await apiClient.delete(`/products/${selectedProductId}`);
-            setProducts(products.filter(p => p.id !== selectedProductId));
-            handleFeedback(setSuccess, 'Producto eliminado con éxito.');
-        } catch (err) {
-            handleFeedback(setError, 'No se pudo eliminar el producto.');
+    const handleDelete = () => {
+        if (selectedProductId) {
+            deleteProductMutation.mutate(selectedProductId);
         }
-        handleCloseDialogs();
     };
 
     return (
-        <Container>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <div className="page-fade-in">
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 2, sm: 0 }, mb: 4 }}>
                 <Typography variant="h4" component="h1">Gestión de Productos</Typography>
                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
                     Crear Nuevo Producto
                 </Button>
             </Box>
 
-            <Snackbar open={!!success} autoHideDuration={5000} onClose={() => setSuccess('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-                <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>{success}</Alert>
-            </Snackbar>
-            <Snackbar open={!!error} autoHideDuration={5000} onClose={() => setError('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-                <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>{error}</Alert>
+            <Snackbar open={!!feedback.message} autoHideDuration={5000} onClose={() => setFeedback({ type: '', message: '' })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+                <Alert onClose={() => setFeedback({ type: '', message: '' })} severity={feedback.type || 'info'} sx={{ width: '100%' }}>
+                    {feedback.message}
+                </Alert>
             </Snackbar>
 
-            {loading ? (
+            {isLoading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>
+            ) : isError ? (
+                <Alert severity="error">No se pudieron cargar los productos.</Alert>
             ) : (
-                <TableContainer component={Paper}>
+                <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
                     <Table>
                         <TableHead>
                             <TableRow>
                                 <TableCell>Nombre</TableCell>
-                                <TableCell>Descripción</TableCell>
+                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Descripción</TableCell>
                                 <TableCell>Precio</TableCell>
                                 <TableCell align="right">Acciones</TableCell>
                             </TableRow>
@@ -165,7 +169,7 @@ function Products() {
                             {products.map(product => (
                                 <TableRow key={product.id} hover>
                                     <TableCell>{product.name}</TableCell>
-                                    <TableCell>{product.description || 'N/A'}</TableCell>
+                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{product.description || 'N/A'}</TableCell>
                                     <TableCell>${parseFloat(product.price).toFixed(2)}</TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpenEdit(product)}><EditIcon /></IconButton>
@@ -222,7 +226,7 @@ function Products() {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCloseDialogs}>Cancelar</Button>
-                        <Button type="submit">{isEdit ? 'Guardar Cambios' : 'Crear'}</Button>
+                        <Button type="submit" disabled={createProductMutation.isPending || updateProductMutation.isPending}>Crear</Button>
                     </DialogActions>
                 </Box>
             </Dialog>
@@ -237,10 +241,10 @@ function Products() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseDialogs}>Cancelar</Button>
-                    <Button onClick={handleDelete} color="error">Eliminar</Button>
+                    <Button onClick={handleDelete} color="error" disabled={deleteProductMutation.isPending}>Eliminar</Button>
                 </DialogActions>
             </Dialog>
-        </Container>
+        </div>
     );
 }
 

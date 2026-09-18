@@ -1,13 +1,293 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+/* ================================================
+   SISTEMA DE DISEÑO — COTIZADOR
+   Inspirado en CAS_2.0 y Vacaciones
+   ================================================ */
+
+:root {
+  /* Colores */
+  --primary:        #4285F4;
+  --primary-hover:  #3367d6;
+  --primary-light:  rgba(66, 133, 244, 0.12);
+  --danger:         #ef4444;
+  --danger-light:   rgba(239, 68, 68, 0.12);
+  --success:        #22c55e;
+  --success-light:  rgba(34, 197, 94, 0.12);
+  --warning:        #f59e0b;
+
+  /* Fondos */
+  --bg:             #f0f4f8;
+  --bg-secondary:   #e2e8f0;
+  --surface:        rgba(255,255,255,0.85);
+  --surface-solid:  #ffffff;
+
+  /* Texto */
+  --text-primary:   #1e293b;
+  --text-secondary: #64748b;
+  --text-muted:     #94a3b8;
+
+  /* Bordes */
+  --border:         rgba(0,0,0,0.08);
+  --border-focus:   rgba(66,133,244,0.5);
+
+  /* Sombras */
+  --shadow-xs: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.07);
+  --shadow-md: 0 8px 24px rgba(0,0,0,0.10);
+  --shadow-lg: 0 16px 40px rgba(0,0,0,0.14);
+  --shadow-xl: 0 24px 60px rgba(0,0,0,0.18);
+
+  /* Radios */
+  --radius-sm:   8px;
+  --radius-md:   14px;
+  --radius-lg:   20px;
+  --radius-full: 9999px;
+
+  /* Sidebar */
+  --sidebar-w:   240px;
+  --sidebar-bg:  rgba(255,255,255,0.92);
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+[data-theme="dark"] {
+  --bg:             #0f172a;
+  --bg-secondary:   #1e293b;
+  --surface:        rgba(30,41,59,0.90);
+  --surface-solid:  #1e293b;
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --border:         rgba(255,255,255,0.08);
+  --shadow-sm:      0 4px 12px rgba(0,0,0,0.3);
+  --shadow-md:      0 8px 24px rgba(0,0,0,0.4);
+  --shadow-lg:      0 16px 40px rgba(0,0,0,0.5);
+  --sidebar-bg:     rgba(15,23,42,0.95);
+}
+
+/* ================================================ */
+/*  RESET & BASE                                    */
+/* ================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: 'Outfit', 'Roboto', sans-serif;
+  background: var(--bg);
+  color: var(--text-primary);
+  min-height: 100vh;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* ================================================ */
+/*  GLASSMORPHISM UTILITY                           */
+/* ================================================ */
+.glass {
+  background: var(--surface);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+/* ================================================ */
+/*  ANIMACIONES                                     */
+/* ================================================ */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.page-fade-in  { animation: fadeInUp 0.4s ease-out both; }
+.fade-in       { animation: fadeIn  0.35s ease-out both; }
+.scale-in      { animation: scaleIn 0.3s ease-out both; }
+
+/* ================================================ */
+/*  BOTONES BASE (para el Login que no usa MUI)    */
+/* ================================================ */
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 11px 24px;
+  border-radius: var(--radius-full);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(66,133,244,0.35);
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(66,133,244,0.45);
+}
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 11px 24px;
+  border-radius: var(--radius-full);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s, transform 0.15s;
+}
+.btn-secondary:hover {
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateY(-1px);
+}
+
+/* ================================================ */
+/*  INPUTS BASE (para el Login que no usa MUI)     */
+/* ================================================ */
+.input-field {
+  width: 100%;
+  padding: 11px 18px 11px 44px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.input-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(66,133,244,0.18);
+}
+[data-theme="dark"] .input-field {
+  background: rgba(255,255,255,0.06);
+}
+
+/* ================================================ */
+/*  MODAL OVERLAY GENÉRICO                         */
+/* ================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-box {
+  width: 90%;
+  max-width: 500px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  animation: scaleIn 0.25s ease;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s, color 0.2s;
+}
+.modal-close-btn:hover {
+  background: var(--danger-light);
+  color: var(--danger);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: 65vh;
+}
+
+.modal-footer {
+  padding: 14px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* ================================================ */
+/*  SCROLLBAR                                       */
+/* ================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(100,116,139,0.35);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100,116,139,0.6);
+}
+
+/* MUI Dialogs should open on top of settings modals (z-index 9999) */
+.MuiDialog-root,
+.MuiModal-root {
+  z-index: 10005 !important;
+}
+
+/* ================================================ */
+/*  RESPONSIVE — Tipografía y espaciado mobile      */
+/* ================================================ */
+@media (max-width: 600px) {
+  .MuiTypography-h4 { font-size: 1.35rem !important; }
+  .MuiTypography-h5 { font-size: 1.15rem !important; }
+  .MuiTypography-h6 { font-size: 1rem !important; }
+
+  .MuiButton-root { padding: 6px 16px !important; font-size: 0.85rem !important; }
+  .MuiTableCell-root { padding: 8px 10px !important; font-size: 0.8rem !important; }
+  .MuiChip-root { font-size: 0.75rem !important; }
+
+  .MuiCard-root { border-radius: 12px !important; }
+  .MuiPaper-root { border-radius: 12px !important; }
 }

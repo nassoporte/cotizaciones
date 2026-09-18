@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import apiClient from '../api/axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     Container,
     Typography,
@@ -27,40 +28,65 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 
+// Function to fetch clients
+const fetchClients = async () => {
+    const { data } = await apiClient.get('/clients/');
+    return data;
+};
+
 function Clients() {
-    const [clients, setClients] = useState([]);
+    const queryClient = useQueryClient();
+
+    // Dialog and form state
     const [openFormDialog, setOpenFormDialog] = useState(false);
     const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
     const [isEdit, setIsEdit] = useState(false);
     const [selectedClientId, setSelectedClientId] = useState(null);
-
-    const initialFormState = { id: null, name: '', client_id_number: '' };
+    const initialFormState = { id: null, name: '', contact_person: '', email: '', phone: '' };
     const [formState, setFormState] = useState(initialFormState);
+    const [feedback, setFeedback] = useState({ type: '', message: '' });
 
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    // Fetching data with useQuery
+    const { data: clients = [], isLoading, isError } = useQuery({ queryKey: ['clients'], queryFn: fetchClients });
 
-    const fetchClients = useCallback(async () => {
-        try {
-            setLoading(true);
-            const response = await apiClient.get('/clients/');
-            setClients(response.data);
-        } catch (err) {
-            setError('No se pudieron cargar los clientes.');
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    // Mutations
+    const createClientMutation = useMutation({
+        mutationFn: (newClient) => apiClient.post('/clients/', newClient),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clients'] });
+            setFeedback({ type: 'success', message: 'Cliente creado con éxito.' });
+            handleCloseDialogs();
+        },
+        onError: (error) => {
+            const errorMsg = error.response?.data?.detail || 'No se pudo crear el cliente.';
+            setFeedback({ type: 'error', message: errorMsg });
+        },
+    });
 
-    useEffect(() => {
-        fetchClients();
-    }, [fetchClients]);
+    const updateClientMutation = useMutation({
+        mutationFn: (updatedClient) => apiClient.put(`/clients/${updatedClient.id}`, updatedClient),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clients'] });
+            setFeedback({ type: 'success', message: 'Cliente actualizado con éxito.' });
+            handleCloseDialogs();
+        },
+        onError: (error) => {
+            const errorMsg = error.response?.data?.detail || 'No se pudo actualizar el cliente.';
+            setFeedback({ type: 'error', message: errorMsg });
+        },
+    });
 
-    const handleFeedback = (setter, message) => {
-        setter(message);
-        setTimeout(() => setter(''), 5000);
-    };
+    const deleteClientMutation = useMutation({
+        mutationFn: (clientId) => apiClient.delete(`/clients/${clientId}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['clients'] });
+            setFeedback({ type: 'success', message: 'Cliente eliminado con éxito.' });
+            handleCloseDialogs();
+        },
+        onError: () => {
+            setFeedback({ type: 'error', message: 'No se pudo eliminar el cliente.' });
+        },
+    });
 
     const handleFormChange = (e) => {
         const { name, value } = e.target;
@@ -75,7 +101,13 @@ function Clients() {
 
     const handleOpenEdit = (client) => {
         setIsEdit(true);
-        setFormState({ id: client.id, name: client.name, client_id_number: client.client_id_number || '' });
+        setFormState({ 
+            id: client.id, 
+            name: client.name, 
+            contact_person: client.contact_person || '',
+            email: client.email || '',
+            phone: client.phone || ''
+        });
         setOpenFormDialog(true);
     };
 
@@ -90,69 +122,62 @@ function Clients() {
         setSelectedClientId(null);
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
         if (!formState.name.trim()) {
-            handleFeedback(setError, 'El nombre del cliente es obligatorio.');
+            setFeedback({ type: 'error', message: 'El nombre del cliente es obligatorio.' });
             return;
         }
 
-        const clientData = { name: formState.name, client_id_number: formState.client_id_number };
-        const url = isEdit ? `/clients/${formState.id}` : '/clients/';
-        const method = isEdit ? 'put' : 'post';
+        const clientData = { 
+            id: formState.id,
+            name: formState.name, 
+            contact_person: formState.contact_person,
+            email: formState.email,
+            phone: formState.phone
+        };
 
-        try {
-            const response = await apiClient[method](url, clientData);
-            if (isEdit) {
-                setClients(clients.map(c => (c.id === formState.id ? response.data : c)));
-                handleFeedback(setSuccess, 'Cliente actualizado con éxito.');
-            } else {
-                setClients([...clients, response.data]);
-                handleFeedback(setSuccess, 'Cliente creado con éxito.');
-            }
-            handleCloseDialogs();
-        } catch (err) {
-            handleFeedback(setError, `No se pudo ${isEdit ? 'actualizar' : 'crear'} el cliente.`);
+        if (isEdit) {
+            updateClientMutation.mutate(clientData);
+        } else {
+            createClientMutation.mutate(clientData);
         }
     };
 
-    const handleDelete = async () => {
-        if (!selectedClientId) return;
-        try {
-            await apiClient.delete(`/clients/${selectedClientId}`);
-            setClients(clients.filter(c => c.id !== selectedClientId));
-            handleFeedback(setSuccess, 'Cliente eliminado con éxito.');
-        } catch (err) {
-            handleFeedback(setError, 'No se pudo eliminar el cliente.');
+    const handleDelete = () => {
+        if (selectedClientId) {
+            deleteClientMutation.mutate(selectedClientId);
         }
-        handleCloseDialogs();
     };
 
     return (
-        <Container>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+        <div className="page-fade-in">
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: { xs: 2, sm: 0 }, mb: 4 }}>
                 <Typography variant="h4" component="h1">Gestión de Clientes</Typography>
                 <Button variant="contained" startIcon={<AddIcon />} onClick={handleOpenCreate}>
                     Crear Nuevo Cliente
                 </Button>
             </Box>
 
-            <Snackbar open={!!success} autoHideDuration={5000} onClose={() => setSuccess('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-                <Alert onClose={() => setSuccess('')} severity="success" sx={{ width: '100%' }}>{success}</Alert>
-            </Snackbar>
-            <Snackbar open={!!error} autoHideDuration={5000} onClose={() => setError('')} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
-                <Alert onClose={() => setError('')} severity="error" sx={{ width: '100%' }}>{error}</Alert>
+            <Snackbar open={!!feedback.message} autoHideDuration={5000} onClose={() => setFeedback({ type: '', message: '' })} anchorOrigin={{ vertical: 'top', horizontal: 'center' }}>
+                <Alert onClose={() => setFeedback({ type: '', message: '' })} severity={feedback.type || 'info'} sx={{ width: '100%' }}>
+                    {feedback.message}
+                </Alert>
             </Snackbar>
 
-            {loading ? (
+            {isLoading ? (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}><CircularProgress /></Box>
+            ) : isError ? (
+                <Alert severity="error">No se pudieron cargar los clientes.</Alert>
             ) : (
-                <TableContainer component={Paper}>
+                <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
                     <Table>
                         <TableHead>
                             <TableRow>
                                 <TableCell>Nombre</TableCell>
                                 <TableCell>ID Cliente</TableCell>
+                                <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Email</TableCell>
+                                <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>Teléfono</TableCell>
                                 <TableCell align="right">Acciones</TableCell>
                             </TableRow>
                         </TableHead>
@@ -161,6 +186,8 @@ function Clients() {
                                 <TableRow key={client.id} hover>
                                     <TableCell>{client.name}</TableCell>
                                     <TableCell>{client.client_id_number || 'N/A'}</TableCell>
+                                    <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>{client.email || 'N/A'}</TableCell>
+                                    <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>{client.phone || 'N/A'}</TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpenEdit(client)}><EditIcon /></IconButton>
                                         <IconButton onClick={() => handleOpenDeleteDialog(client.id)} color="error"><DeleteIcon /></IconButton>
@@ -177,32 +204,14 @@ function Clients() {
                 <DialogTitle>{isEdit ? 'Editar Cliente' : 'Crear Nuevo Cliente'}</DialogTitle>
                 <Box component="form" onSubmit={handleSubmit}>
                     <DialogContent>
-                        <TextField
-                            autoFocus
-                            margin="dense"
-                            name="name"
-                            label="Nombre del Cliente"
-                            type="text"
-                            fullWidth
-                            variant="outlined"
-                            value={formState.name}
-                            onChange={handleFormChange}
-                            required
-                        />
-                        <TextField
-                            margin="dense"
-                            name="client_id_number"
-                            label="ID de Cliente (Opcional)"
-                            type="text"
-                            fullWidth
-                            variant="outlined"
-                            value={formState.client_id_number}
-                            onChange={handleFormChange}
-                        />
+                        <TextField autoFocus margin="dense" name="name" label="Nombre del Cliente" type="text" fullWidth variant="outlined" value={formState.name} onChange={handleFormChange} required />
+                        <TextField margin="dense" name="contact_person" label="Persona de Contacto" type="text" fullWidth variant="outlined" value={formState.contact_person} onChange={handleFormChange} />
+                        <TextField margin="dense" name="email" label="Email" type="email" fullWidth variant="outlined" value={formState.email} onChange={handleFormChange} />
+                        <TextField margin="dense" name="phone" label="Teléfono" type="text" fullWidth variant="outlined" value={formState.phone} onChange={handleFormChange} />
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleCloseDialogs}>Cancelar</Button>
-                        <Button type="submit">{isEdit ? 'Guardar Cambios' : 'Crear'}</Button>
+                        <Button type="submit" disabled={createClientMutation.isPending || updateClientMutation.isPending}>{isEdit ? 'Guardar Cambios' : 'Crear'}</Button>
                     </DialogActions>
                 </Box>
             </Dialog>
@@ -217,10 +226,10 @@ function Clients() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleCloseDialogs}>Cancelar</Button>
-                    <Button onClick={handleDelete} color="error">Eliminar</Button>
+                    <Button onClick={handleDelete} color="error" disabled={deleteClientMutation.isPending}>Eliminar</Button>
                 </DialogActions>
             </Dialog>
-        </Container>
+        </div>
     );
 }
 

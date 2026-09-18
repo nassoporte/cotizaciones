@@ -1,0 +1,15 @@
+.env
+.env.*
+__pycache__/
+*.pyc
+*.db
+*.db-shm
+*.db-wal
+venv/
+data/
+uploads/
+migrate_*.py
+test_file.txt
+.git
+.gitignore
+Dockerfile

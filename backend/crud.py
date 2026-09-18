@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 import datetime
+from datetime import timedelta
 import secrets
 from fastapi import HTTPException
 
@@ -66,8 +67,16 @@ def update_account(db: Session, account_id: int, account: schemas.AccountUpdate)
     if not db_account:
         return None
     update_data = account.dict(exclude_unset=True)
+
+    # If password is provided, hash it and update the field name
+    if "password" in update_data and update_data["password"]:
+        hashed_password = get_password_hash(update_data["password"])
+        update_data["hashed_password"] = hashed_password
+        del update_data["password"] # Avoid trying to set a 'password' attribute
+
     for key, value in update_data.items():
         setattr(db_account, key, value)
+    
     db.add(db_account)
     db.commit()
     db.refresh(db_account)
@@ -95,9 +104,9 @@ def delete_account_with_password(db: Session, *, account_id: int, admin_account:
 def get_user(db: Session, user_id: int, account_id: int):
     return db.query(models.User).filter(models.User.id == user_id, models.User.account_id == account_id).first()
 
-def get_user_by_email(db: Session, email: str):
+def get_user_by_email(db: Session, email: str, account_id: int):
     # This can be used to check for duplicate emails within an account if needed
-    return db.query(models.User).filter(models.User.email == email).first()
+    return db.query(models.User).filter(models.User.email == email, models.User.account_id == account_id).first()
 
 def get_users_by_account(db: Session, account_id: int, skip: int = 0, limit: int = 100):
     return db.query(models.User).filter(models.User.account_id == account_id).offset(skip).limit(limit).all()
@@ -158,8 +167,25 @@ def delete_user(db: Session, user_id: int, account_id: int):
 def get_clients(db: Session, account_id: int, skip: int = 0, limit: int = 100):
     return db.query(models.Client).filter(models.Client.account_id == account_id).offset(skip).limit(limit).all()
 
+def _get_next_client_id_number(db: Session, account_id: int) -> str:
+    last_client = (
+        db.query(models.Client)
+        .filter(
+            models.Client.account_id == account_id,
+            models.Client.client_id_number.isnot(None),
+            models.Client.client_id_number != ""
+        )
+        .order_by(models.Client.id.desc())
+        .first()
+    )
+    if not last_client or not last_client.client_id_number.isdigit():
+        return "01"
+    last_number = int(last_client.client_id_number)
+    return f"{last_number + 1:02d}"
+
 def create_client(db: Session, client: schemas.ClientCreate, account_id: int):
-    db_client = models.Client(**client.dict(), account_id=account_id)
+    client_id_number = _get_next_client_id_number(db, account_id)
+    db_client = models.Client(**client.dict(), client_id_number=client_id_number, account_id=account_id)
     db.add(db_client)
     db.commit()
     db.refresh(db_client)
@@ -172,8 +198,8 @@ def update_client(db: Session, client_id: int, client: schemas.ClientCreate, acc
     db_client = get_client(db, client_id=client_id, account_id=account_id)
     if not db_client:
         return None
-    # Create a new dictionary from the client schema to avoid issues with the attached state
     update_data = client.dict()
+    update_data.pop("client_id_number", None)
     for key, value in update_data.items():
         setattr(db_client, key, value)
     db.commit()
@@ -257,14 +283,19 @@ def create_quotation(db: Session, quotation: schemas.QuotationCreate, user_id: i
     # 2. Get next quotation number for the account
     next_quotation_number = _get_next_quotation_number(db, account_id)
 
-    # 3. Create the main Quotation record
+    # 3. Calculate valid_until_date
+    created_date = datetime.datetime.now(datetime.timezone.utc)
+    valid_until_date = created_date + timedelta(days=quotation.validity_days)
+
+    # 4. Create the main Quotation record
     db_quotation = models.Quotation(
         quotation_number=next_quotation_number,
         client_id=quotation.client_id,
         user_id=user_id,
         account_id=account_id,
-        created_date=datetime.datetime.now(datetime.timezone.utc),
-        valid_until_date=quotation.valid_until_date,
+        created_date=created_date,
+        valid_until_date=valid_until_date,
+        validity_days=quotation.validity_days,
         subtotal=subtotal,
         tax_percentage=quotation.tax_percentage,
         total_tax=total_tax,
@@ -276,7 +307,7 @@ def create_quotation(db: Session, quotation: schemas.QuotationCreate, user_id: i
     db.commit()
     db.refresh(db_quotation)
 
-    # 4. Create the QuotationItem records
+    # 5. Create the QuotationItem records
     for item in quotation.items:
         db_item = models.QuotationItem(
             **item.dict(),
@@ -296,6 +327,14 @@ def update_quotation(db: Session, quotation_id: int, quotation_in: schemas.Quota
 
     # 1. Update scalar fields from the input schema
     update_data = quotation_in.dict(exclude_unset=True)
+    
+    # Handle validity_days specifically
+    if 'validity_days' in update_data:
+        db_quotation.validity_days = update_data['validity_days']
+        # Recalculate valid_until_date based on the original created_date
+        db_quotation.valid_until_date = db_quotation.created_date + timedelta(days=update_data['validity_days'])
+        del update_data['validity_days'] # Remove from dict to avoid generic setattr
+
     for key, value in update_data.items():
         if hasattr(db_quotation, key) and key != "items":
             setattr(db_quotation, key, value)
@@ -345,16 +384,17 @@ def delete_quotation(db: Session, quotation_id: int, account_id: int):
 # --- Company Profile Functions (Could be adapted for multi-tenancy) ---
 # These currently affect a single global profile.
 
-def get_company_profile(db: Session):
-    profile = db.query(models.CompanyProfile).first()
+def get_company_profile(db: Session, account_id: int):
+    profile = db.query(models.CompanyProfile).filter(models.CompanyProfile.account_id == account_id).first()
     if not profile:
-        # If no profile exists, create a default one
+        # If no profile exists, create a default one for this account
         default_profile = models.CompanyProfile(
             company_name="",
             address="",
             phone="",
             website="",
-            logo_path=""
+            logo_path="",
+            account_id=account_id
         )
         db.add(default_profile)
         db.commit()
@@ -362,18 +402,18 @@ def get_company_profile(db: Session):
         return default_profile
     return profile
 
-def update_company_profile(db: Session, profile_in: schemas.CompanyProfileCreate):
-    profile = db.query(models.CompanyProfile).first()
+def update_company_profile(db: Session, profile_in: schemas.CompanyProfileUpdate, account_id: int):
+    profile = db.query(models.CompanyProfile).filter(models.CompanyProfile.account_id == account_id).first()
     if profile:
-        profile_data = profile_in.dict()
-        for key, value in profile_data.items():
+        update_data = profile_in.dict(exclude_unset=True)
+        for key, value in update_data.items():
             setattr(profile, key, value)
         db.commit()
         db.refresh(profile)
     return profile
 
-def update_logo_path(db: Session, logo_path: str):
-    profile = db.query(models.CompanyProfile).first()
+def update_logo_path(db: Session, logo_path: str, account_id: int):
+    profile = db.query(models.CompanyProfile).filter(models.CompanyProfile.account_id == account_id).first()
     if profile:
         profile.logo_path = logo_path
         db.commit()
